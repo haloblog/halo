@@ -12,11 +12,13 @@ import run.halo.app.model.entity.Attachment;
 import run.halo.app.model.enums.AttachmentType;
 import run.halo.app.model.params.AttachmentParam;
 import run.halo.app.model.params.AttachmentQuery;
+import run.halo.app.service.AttachmentHandlerCovertService;
 import run.halo.app.service.AttachmentService;
 
 import javax.validation.Valid;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Future;
 
 import static org.springframework.data.domain.Sort.Direction.DESC;
 
@@ -31,13 +33,18 @@ import static org.springframework.data.domain.Sort.Direction.DESC;
 public class AttachmentController {
 
     private final AttachmentService attachmentService;
+    private final AttachmentHandlerCovertService attachmentHandlerCovertService;
 
-    public AttachmentController(AttachmentService attachmentService) {
+    public AttachmentController(
+            AttachmentService attachmentService,
+            AttachmentHandlerCovertService attachmentHandlerCovertService) {
         this.attachmentService = attachmentService;
+        this.attachmentHandlerCovertService = attachmentHandlerCovertService;
     }
 
     @GetMapping
-    public Page<AttachmentDTO> pageBy(@PageableDefault(sort = "createTime", direction = DESC) Pageable pageable,
+    public Page<AttachmentDTO> pageBy(
+            @PageableDefault(sort = "createTime", direction = DESC) Pageable pageable,
             AttachmentQuery attachmentQuery) {
         return attachmentService.pageDtosBy(pageable, attachmentQuery);
     }
@@ -51,7 +58,8 @@ public class AttachmentController {
 
     @PutMapping("{attachmentId:\\d+}")
     @ApiOperation("Updates a attachment")
-    public AttachmentDTO updateBy(@PathVariable("attachmentId") Integer attachmentId,
+    public AttachmentDTO updateBy(
+            @PathVariable("attachmentId") Integer attachmentId,
             @RequestBody @Valid AttachmentParam attachmentParam) {
         Attachment attachment = attachmentService.getById(attachmentId);
         attachmentParam.update(attachment);
@@ -101,5 +109,19 @@ public class AttachmentController {
     @ApiOperation("Lists all of types.")
     public List<AttachmentType> listTypes() {
         return attachmentService.listAllType();
+    }
+
+    @PutMapping("covert_attachment_handler")
+    @ApiOperation("Covert all attachments to current Handler.")
+    public Future<String> covertAttachmentHandler(
+            @RequestParam(name = "sourceAttachmentType", required = false, defaultValue = "LOCAL") AttachmentType sourceAttachmentType,
+            @RequestParam(name = "deleteOldAttachment", required = false, defaultValue = "false") Boolean deleteOldAttachment,
+            @RequestParam(name = "uploadAllInAttachment", required = false, defaultValue = "false") Boolean uploadAllInAttachment,
+            @RequestParam(name = "uploadAllInPost", required = false, defaultValue = "false") Boolean uploadAllInPost) {
+        return attachmentHandlerCovertService.covertHandlerByPosts(
+                sourceAttachmentType,
+                deleteOldAttachment,
+                uploadAllInAttachment,
+                uploadAllInPost);
     }
 }
